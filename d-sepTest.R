@@ -1,7 +1,7 @@
 library(dagitty)
 # load library ppcor 
 library(ppcor) 
-setwd("C:/Users/suzan/OneDrive/Documents/")
+setwd("C:/Users/Documents/")
 library(caret)
 # Get a list of files in the "data" directory
 files_G <- list.files("data/true_amat", pattern = "\\.csv$", full.names = TRUE)
