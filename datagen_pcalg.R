@@ -1,63 +1,39 @@
-#!/usr/bin/env Rscript
-#args = commandArgs(trailingOnly=TRUE)
-args <- c("10000",  "2")  #n->sample size and degree
-
-# setwd("~/Desktop/csl-benchmark/")
-
-# create folders to store results about DGPs and adjacency matrices
-dir.create("data")
-dir.create("data/dgps")
-dir.create("data/true_amat")
-
-# install packages if necessary 
-#if (!requireNamespace("BiocManager", quietly = TRUE))
-#   install.packages("BiocManager")
-#BiocManager::install("graph")
-#install.packages('pcalg')
-
-# load package 'pcalg'
-library(pcalg)
-
-# set seed
-set.seed(44)
-
-# number of nodes for small to large graph
-size <- c(10, 20, 50, 100)
-# names of graphs (add prob to graph name)
-size_tokens <- c("s", "sm", "m", "l")
-
-# sample size of sampled data sets
-n <- strtoi(args[1])
-degree <- strtoi(args[2])
-
-for (i in c(1:4)){
-  d <- size[i]
-  token <- size_tokens[i]
+generate_and_save_graph <- function(num_nodes, density, sample_number) {
+  set.seed(44)
   
-  # randomly generate DAG
-  graph <- r.gauss.pardag(d, prob=degree/d, top.sort = FALSE, normalize = TRUE,
-                          lbe = 0.5, ube = 2, neg.coef = TRUE, labels = as.character(1:d),
-                          lbv = 0.5, ubv = 1)
-  
-  # retrieve and store info about DGP (weight matrix and error variance)
-  proba <- round(degree/d,digits=5) 
-  weights <- graph$weight.mat()
-  error_var <- graph$err.var()
-  weights_filename <- paste("data/dgps/dag_", token,"_", proba ,"_weights.csv", sep="")
-  write.csv(weights, weights_filename, row.names = FALSE)
-  
-  variance_filename <- paste("data/dgps/dag_", token, "_", proba, "_error_var.csv", sep="")
-  write.csv(error_var, variance_filename, row.names = FALSE)
-  
-  # retrieve Boolean adjacency matrix and store it
-  amat <- as(graph, "matrix")
-  amat_name <- paste("data/true_amat/dag_", token, "_", proba, ".csv", sep="")
-  write.csv(amat, amat_name, row.names = FALSE)
-  
-  # create and store data
-  data <- graph$simulate(n)
-  filename <- paste("data/dag_", token, "_", proba, ".csv", sep="")
-  write.csv(data, filename, row.names = FALSE)
-  
+  # Loop through each combination of variables
+  for (nodes in nodes_list) {
+    for (density in density_list) {
+      for (sample_number in sample_number_list) {
+        
+        # randomly generate DAG
+        graph <- r.gauss.pardag(nodes, prob=density/nodes, top.sort = FALSE, normalize = TRUE,
+                                lbe = 0.5, ube = 2, neg.coef = TRUE, labels = as.character(1:nodes),
+                                lbv = 0.5, ubv = 1)
+        # retrieve and store info about DGP (weight matrix and error variance)
+        proba <- round(nodes/density,digits=5) 
+        weights <- graph$weight.mat()
+        error_var <- graph$err.var()
+        weights_filename <- paste("data/dgps/dag_", nodes,"_",density, "_",sample_number ,"_weights.csv", sep="")
+        write.csv(weights, weights_filename, row.names = FALSE)
+        
+        variance_filename <- paste("data/dgps/dag_", nodes, "_",density,  "_",sample_number, "_error_var.csv", sep="")
+        write.csv(error_var, variance_filename, row.names = FALSE)
+        
+        # retrieve Boolean adjacency matrix and store it
+        amat <- as(graph, "matrix")
+        amat_name <- paste("data/true_amat/dag_", nodes, "_",density, "_",sample_number, ".csv", sep="")
+        write.csv(amat, amat_name, row.names = FALSE)
+        
+        # create and store data
+        data <- graph$simulate(sample_number)
+        filename <- paste("data/dag_", nodes, "_",density, "_",sample_number, ".csv", sep="")
+        write.csv(data, filename, row.names = FALSE)
+        # Define a unique filename for each combination
+        
+      }
+    }
+  }
 }
+
 
