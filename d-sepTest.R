@@ -1,13 +1,3 @@
-library(dagitty)
-# load library ppcor 
-library(ppcor) 
-setwd("C:/Users/Documents/")
-library(caret)
-# Get a list of files in the "data" directory
-files_G <- list.files("data/true_amat", pattern = "\\.csv$", full.names = TRUE)
-files_EG <- list.files("generatedData", pattern = "\\.csv$", full.names = TRUE)
-files_Data <- list.files("data", pattern = "\\.csv$", full.names = TRUE)
-
 
 
 convert_matrix_dag <- function(graph_data_numeric) {
@@ -62,19 +52,21 @@ monte_carlo_simulation <- function(true_graph,estimated_graph,node_set,nmc,data_
     # Generate a new set with size ns
     XS <- sample(names(node_set), size = ns, replace = FALSE)
 
-    # d-seperation
+    # d-seperation test for the true graph
     is_sep_true <- dconnected(true_graph, Xi, Xj,  XS)
+    
+    # d-seperation test for the estemated graph
     is_sep_est <- dconnected(estimated_graph, Xi, Xj,  XS)
     
-  
     # Conditionally independent partial correlation
     index_Xi <- match(Xi, names(node_set))
     index_Xj <- match(Xj, names(node_set))
     indices_XS <- match(XS, names(node_set))
     
+    # Partial corrolation on the  true dataset 
     par_cor_true <- pcor.test(data_matrix[, index_Xi], data_matrix[, index_Xj], data_matrix[, -indices_XS])
 
-    is_correlated_true <- par_cor_true$p.value < alpha #chekc it out
+    is_correlated_true <- par_cor_true$p.value < alpha 
     
     # Update counts based on d-separation results
     if (is_sep_true) {
@@ -94,58 +86,88 @@ monte_carlo_simulation <- function(true_graph,estimated_graph,node_set,nmc,data_
     
     # Update counts based on d-separation results
     if (is_sep_true) {
-      if (is_correlated_true) {
+      if (isTRUE(is_correlated_true)) {
         TPC <- TPC + 1 
         
       } else {
         FNC <- FNC + 1 
       }
     } else {
-      if (!is_correlated_true) {
+      if (!is.na(is_correlated_true) && !is_correlated_true) {
         TNC <- TNC + 1
       } else {
         FPC <- FPC + 1
       }
     }
     
- 
   }
   # Return counts
-  return(c(TN,FP,FN,TP))
-    
-    # TODO
-    # Visualization TP.. in a confusion matrix.
+  return(list(c(TP,FN,FP,TN), c(TPC,FNC,FPC,TNC)))
+}
+
+test_sep <- function(alg_name) {
+  
+  all_results_list <- list()
+  all_results_listC <- list()
+  alg_name<-alg_name
+  print(alg_name)
+  # Get a list of files in the "data" directory
+  files_G <- list.files("data/true_amat", pattern = "\\.csv$", full.names = TRUE)
  
-  # return(nmc)
+  files_EG <- list.files( paste("gen_data", alg_name, sep = "/"), pattern = "\\.csv$", full.names = TRUE)
+ 
+  files_Data <- list.files("data", pattern = "\\.csv$", full.names = TRUE)
+  
+  execution_times <- c()
+  accuracy_sep <- c()
+  accuracy_ind <- c()
+  for (i in seq_along(files_EG)) {
+    # Read the True graph
+    true_graph <- read.csv(files_G[i])
+    graph_data_numeric_true <- as.matrix(true_graph) + 0
+    dag_true<-convert_matrix_dag(graph_data_numeric_true)
+    
+    # Read the estimated graph
+    estimated_graph <- read.csv(files_EG[i])
+    graph_data_numeric_est <- as.matrix(estimated_graph) + 0
+    dag_est<-convert_matrix_dag(graph_data_numeric_est)
+    
+    # The dataset
+    data_matrix <- read.csv(files_Data[i])
+    alpha <- 0.05
+    
+    # Set of nodes
+    node_set<-true_graph[0,]
+    nmc <- 50  # Number of MC samples
+    
+    start_time <- Sys.time()
+    result <- monte_carlo_simulation(dag_true,dag_est, node_set,nmc,data_matrix,alpha)
+    end_time <- Sys.time()
+    
+    execution_time <- end_time - start_time
+    execution_times <- c(execution_times, as.numeric(execution_time))
+    
+    #  Result for d-sep of true and est graph
+    result_matrix <- matrix(result[[1]], nrow = 2, byrow = TRUE)
+    # Result of test corrolation and true graph
+    result_matrixC <- matrix(result[[2]], nrow = 2, byrow = TRUE)
+    
+    accuracy_sep <- c(accuracy_sep, as.numeric(result_matrix[1,][1] + result_matrix[2,][2]))
+    accuracy_ind <- c(accuracy_ind, as.numeric(result_matrixC[1,][1] + result_matrixC[2,][2]))
+ 
+    # Append matrices to the lists for the first 4 files
+    all_results_list[[i]] <- result_matrix
+    all_results_listC[[i]] <- result_matrixC
+    
+  }
+  
+  confusionAlg(all_results_list,substr(tools::file_path_sans_ext(basename(files_G)), 9, nchar(basename(files_G))),alg_name=alg_name, sep_con="d-sep")
+  confusionAlg(all_results_listC,substr(tools::file_path_sans_ext(basename(files_EG)), 9, nchar(basename(files_G))),alg_name=alg_name,sep_con="corr")
+ 
+  return(list(execution_times = execution_times, accuracy_sep = accuracy_sep,accuracy_ind = accuracy_ind))
 }
 
 
-for (i in seq_along(files_EG)) {
-  # Read the CSV files
-  true_graph <- read.csv(files_G[i])
-  graph_data_numeric_true <- as.matrix(true_graph) + 0
-  dag_true<-convert_matrix_dag(graph_data_numeric_true)
-  
-  estimated_graph <- read.csv(files_EG[i])
-  graph_data_numeric_est <- as.matrix(estimated_graph) + 0
-  dag_est<-convert_matrix_dag(graph_data_numeric_est)
-  
-  # For the PC
-  data_matrix <- read.csv(files_Data[i])
-  alpha <- 0.05
-  
-  
-  # Set of nodes
-  node_set<-true_graph[0,]
-  nmc <- 50  # Number of MC samples
-  result <- monte_carlo_simulation(dag_true,dag_est, node_set,nmc,data_matrix,alpha)
-  print(result)
-  result_matrix <- matrix(result, nrow = 2, byrow = TRUE)
-  # Create a list of matrices
-  results_list <- list(result_matrix)
-  
-  confusionAlg(results_list)
-}
 
 
 
