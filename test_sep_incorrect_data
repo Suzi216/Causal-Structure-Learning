@@ -1,0 +1,61 @@
+function( alg_name) {
+  
+  all_results_list <- list()
+  all_results_listC <- list()
+  alg_name<-alg_name
+  
+  # Get a list of files in the "data" directory
+  files_G <- list.files("data/true_amat", pattern = "\\.csv$", full.names = TRUE)
+  
+  files_EG <- list.files( paste("gen_data_incorrect_values", alg_name, sep = "/"), pattern = "\\.csv$", full.names = TRUE)
+  
+  files_Data <- list.files("data", pattern = "\\.csv$", full.names = TRUE)
+  
+  execution_times <- c()
+  accuracy_sep <- c()
+  accuracy_ind <- c()
+  for (i in seq_along(files_EG)) {
+    # Read the True graph
+    true_graph <- read.csv(files_G[i])
+    graph_data_numeric_true <- as.matrix(true_graph) + 0
+    dag_true<-convert_matrix_dag(graph_data_numeric_true)
+    
+    # Read the estimated graph
+    estimated_graph <- read.csv(files_EG[i])
+    graph_data_numeric_est <- as.matrix(estimated_graph) + 0
+    dag_est<-convert_matrix_dag(graph_data_numeric_est)
+    
+    # The dataset
+    data_matrix <- read.csv(files_Data[i])
+    alpha <- 0.05
+    
+    # Set of nodes
+    node_set<-true_graph[0,]
+    nmc <- 100  # Number of MC samples
+    
+    start_time <- Sys.time()
+    result <- monte_carlo_simulation(dag_true,dag_est, node_set,nmc,data_matrix,alpha)
+    end_time <- Sys.time()
+    
+    execution_time <- end_time - start_time
+    execution_times <- c(execution_times, as.numeric(execution_time))
+    
+    #  Result for d-sep of true and est graph
+    result_matrix <- matrix(result[[1]], nrow = 2, byrow = TRUE)
+    # Result of test corrolation and true graph
+    result_matrixC <- matrix(result[[2]], nrow = 2, byrow = TRUE)
+    
+    accuracy_sep <- c(accuracy_sep, as.numeric(result_matrix[1,][1] + result_matrix[2,][2]))
+    accuracy_ind <- c(accuracy_ind, as.numeric(result_matrixC[1,][1] + result_matrixC[2,][2]))
+    
+    # Append matrices to the lists for the first 4 files
+    all_results_list[[i]] <- result_matrix
+    all_results_listC[[i]] <- result_matrixC
+    
+  }
+  
+  confusionAlg(all_results_list,substr(tools::file_path_sans_ext(basename(files_G)), 5, nchar(basename(files_G))),alg_name=alg_name, sep_con="d-sep", term="with incorrect data")
+  confusionAlg(all_results_listC,substr(tools::file_path_sans_ext(basename(files_EG)), 9, nchar(basename(files_G))),alg_name=alg_name,sep_con="corr", term="with incorrect data")
+  
+  return(list(execution_times = execution_times, accuracy_sep = accuracy_sep,accuracy_ind = accuracy_ind))
+}
