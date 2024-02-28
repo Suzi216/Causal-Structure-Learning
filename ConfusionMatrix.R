@@ -1,9 +1,4 @@
-# Install and load the required packages if not already installed
-# install.packages(c("caret", "pheatmap"))
-library(caret)
-library(pheatmap)
-
-confusionAlg <- function(all_results_list, filename,row_labels = c("True_N", "True_P"), col_labels = c("Est_N", "Est_P"),files_name,alg_name,sep_con ) {
+function(all_results_list, filename,row_labels = c("True_N", "True_P"), col_labels = c("Est_N", "Est_P"),files_name,alg_name,sep_con ) {
   alg_name<-alg_name
 
   plot_list=list()
@@ -41,7 +36,7 @@ confusionAlg <- function(all_results_list, filename,row_labels = c("True_N", "Tr
 
  
   pdf( paste("confusion_matrices_", alg_name, "_", sep_con, ".pdf"))
-  grid.arrange(grobs = plot_list, ncol = 8, nrow = 8, top = "Predicted Label", bottom=" ", left = "True Label", right=paste("Confusion Matrices for ", alg_name, " ", sep_con), margin = c(0, 0, unit(5, "points"), 0)) 
+  grid.arrange(grobs = plot_list, ncol = 8, nrow = 8, top = "Predicted Label", bottom=" ", left = "True Label", right=paste("Confusion Matrices for ", alg_name, " for ", sep_con, "testing"), margin = c(0, 0, unit(5, "points"), 0)) 
   
     grid.text("d-sep", x = unit(0.02, "npc"), y = unit( 0.1 , "npc"), gp = gpar(fontsize = 5), just = "bottom", vp = viewport(angle = 0))
     grid.text("d-sep", x = unit(0.02, "npc"), y = unit( 0.22 , "npc"), gp = gpar(fontsize = 5), just = "bottom", vp = viewport(angle = 0))
@@ -84,7 +79,3 @@ confusionAlg <- function(all_results_list, filename,row_labels = c("True_N", "Tr
   # Close the PDF file
   dev.off()
 }
-
-
-
-
