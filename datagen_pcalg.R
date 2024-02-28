@@ -1,4 +1,4 @@
-generate_and_save_graph <- function(num_nodes, density, sample_number) {
+function(num_nodes, density, sample_number) {
   set.seed(44)
   
   # Loop through each combination of variables
@@ -35,5 +35,3 @@ generate_and_save_graph <- function(num_nodes, density, sample_number) {
     }
   }
 }
-
-
